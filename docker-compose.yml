@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+  dream-visualizer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=3000
+      # Open Source Model Configuration - uncomment to use local models
+      # - LOCAL_LLM_ENABLED=true
+      # - LOCAL_LLM_API_ENDPOINT=http://ollama:11434/api
+      # - LOCAL_LLM_MODEL=llama3
+      # - SD_USE_LOCAL_API=true
+      # - SD_LOCAL_API_ENDPOINT=http://stable-diffusion-webui:7860
+    depends_on:
+      - ollama
+      - stable-diffusion-webui
+
+  # Optional LLM service using Ollama (uncomment to use)
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    command: ["serve"]
+    # Comment out this line to enable the Ollama service
+    profiles: ["disabled"]
+
+  # Optional Stable Diffusion WebUI (uncomment to use)
+  stable-diffusion-webui:
+    image: universonic/stable-diffusion-webui:latest
+    volumes:
+      - sd_models:/opt/stable-diffusion-webui/models
+    ports:
+      - "7860:7860"
+    environment:
+      - COMMANDLINE_ARGS=--api
+    # Comment out this line to enable the SD WebUI service
+    profiles: ["disabled"]
+
+volumes:
+  ollama_data:
+  sd_models: 

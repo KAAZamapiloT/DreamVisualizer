@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ dream.processed_data.title }} - Dream Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+            background-color: #f9f9ff;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+        }
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .nav a {
+            color: #6e8efb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        .dream-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        .dream-meta {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .dream-meta .label {
+            font-weight: bold;
+            width: 100px;
+        }
+        .elements {
+            margin-top: 1rem;
+        }
+        .element {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .element:last-child {
+            border-bottom: none;
+        }
+        .color-palette {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .color {
+            width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .video-section {
+            margin-top: 2rem;
+        }
+        video {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .image-item {
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .image-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+        .image-item img:hover {
+            transform: scale(1.05);
+        }
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #777;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>{{ dream.processed_data.title }}</h1>
+        <p>{{ dream.processed_data.summary }}</p>
+    </header>
+
+    <div class="nav">
+        <a href="/">Home</a>
+        <a href="/history">View History</a>
+    </div>
+
+    <div class="container">
+        <div class="dream-info">
+            <div class="dream-details">
+                <h2>Dream Interpretation</h2>
+                <p>{{ dream.processed_data.summary }}</p>
+
+                <div class="dream-meta">
+                    <span class="label">Mood:</span>
+                    <span>{{ dream.processed_data.mood }}</span>
+                </div>
+
+                <div class="dream-meta">
+                    <span class="label">Style:</span>
+                    <span>{{ dream.processed_data.style_suggestion }}</span>
+                </div>
+
+                <h3>Color Palette</h3>
+                <div class="color-palette">
+                    {% for color in dream.processed_data.color_palette %}
+                    <div class="color" id="color-{{ loop.index }}" data-color="{{ color }}" title="{{ color }}"></div>
+                    {% endfor %}
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const colorElements = document.querySelectorAll('[data-color]');
+                        colorElements.forEach(el => {
+                            const color = el.getAttribute('data-color');
+                            el.style.backgroundColor = color;
+                        });
+                    });
+                </script>
+            </div>
+
+            <div class="visual-elements">
+                <h2>Visual Elements</h2>
+                <div class="elements">
+                    {% for element in dream.processed_data.elements %}
+                    <div class="element">
+                        <h3>{{ element.name }} <small>(Importance: {{ element.importance }}/10)</small></h3>
+                        <p>{{ element.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if video_path %}
+    <div class="container video-section">
+        <h2>Dream Visualization</h2>
+        <video controls>
+            <source src="{{ video_path }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    {% endif %}
+
+    <div class="container">
+        <h2>Generated Images</h2>
+        <div class="image-gallery">
+            {% for image in image_paths %}
+            <div class="image-item">
+                <img src="{{ image }}" alt="Dream visual {{ loop.index }}">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Original Dream Description</h2>
+        <p>{{ dream.input_text }}</p>
+    </div>
+
+    <footer>
+        <p>Dream Visualizer &copy; 2023 - Built with Rust, Axum, and AI</p>
+    </footer>
+</body>
+</html> 

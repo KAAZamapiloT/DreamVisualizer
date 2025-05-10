@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dream History - Dream Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+            background-color: #f9f9ff;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+        }
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .nav a {
+            color: #6e8efb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        .dream-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        .dream-card {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .dream-card:last-child {
+            border-bottom: none;
+        }
+        .dream-card .thumbnail {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .dream-card .info h3 {
+            margin-top: 0;
+        }
+        .dream-card .timestamp {
+            color: #777;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .no-dreams {
+            text-align: center;
+            padding: 2rem;
+            color: #777;
+        }
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #777;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Dream History</h1>
+        <p>Your collection of visualized dreams</p>
+    </header>
+
+    <div class="nav">
+        <a href="/">Home</a>
+        <a href="/history">View History</a>
+    </div>
+
+    <div class="container">
+        <h2>Past Dream Visualizations</h2>
+        
+        {% if dreams | length > 0 %}
+        <div class="dream-list">
+            {% for dream in dreams %}
+            <div class="dream-card">
+                {% if dream.image_paths | length > 0 %}
+                <img src="{{ dream.image_paths[0] | replace(from='data/', to='/data/') }}" alt="Dream thumbnail" class="thumbnail">
+                {% else %}
+                <div class="thumbnail" style="background-color: #eee; display: flex; align-items: center; justify-content: center;">
+                    <span>No image</span>
+                </div>
+                {% endif %}
+                
+                <div class="info">
+                    <h3>{{ dream.processed_data.title }}</h3>
+                    <div class="timestamp">{{ dream.timestamp | date(format="%Y-%m-%d %H:%M") }}</div>
+                    <p>{{ dream.processed_data.summary }}</p>
+                    <a href="/result/{{ dream.id }}" class="btn">View Details</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-dreams">
+            <p>You haven't visualized any dreams yet.</p>
+            <a href="/" class="btn">Visualize Your First Dream</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p>Dream Visualizer &copy; 2023 - Built with Rust, Axum, and AI</p>
+    </footer>
+</body>
+</html> 
