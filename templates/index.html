@@ -4,85 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dream Visualizer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 1rem;
-            background-color: #f9f9ff;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            margin: 0;
-            font-size: 2.5rem;
-        }
-        .subtitle {
-            font-style: italic;
-            opacity: 0.9;
-        }
-        .container {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-        textarea {
-            width: 100%;
-            min-height: 200px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: inherit;
-            resize: vertical;
-        }
-        .btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
-        }
         .nav {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        
         .nav a {
-            color: #6e8efb;
+            margin-right: 15px;
             text-decoration: none;
+            color: #333;
             font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
         }
+        
         .nav a:hover {
-            text-decoration: underline;
+            background-color: #e9ecef;
         }
-        footer {
+        
+        .nav a.active {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .nav-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+        }
+        
+        .feature-links {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+        
+        .feature-link {
             text-align: center;
-            margin-top: 2rem;
-            color: #777;
-            font-size: 0.9rem;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 30%;
+        }
+        
+        .feature-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        
+        .feature-link h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .feature-link p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .feature-link a {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -93,22 +90,63 @@
     </header>
 
     <div class="nav">
-        <a href="/">Home</a>
-        <a href="/history">View History</a>
+        <a href="/" class="active">Home</a>
+        <a href="/images">Advanced Images</a>
+        <a href="/enhanced">Enhanced Images</a>
+        <a href="/video">Advanced Video</a>
+        <a href="/history">History</a>
+        <a href="/learning">Learning Dashboard</a>
+        <div class="nav-right">
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" />
+                    <div class="slider round"></div>
+                </label>
+                <span style="margin-left: 10px">Dark Mode</span>
+            </div>
+        </div>
     </div>
 
     <div class="container">
         <h2>Describe Your Dream</h2>
         <p>Enter a detailed description of your dream below. Our AI will analyze it, extract key visual elements, and create a visualization.</p>
         
-        <form action="/process" method="post" enctype="multipart/form-data">
+        <form id="dreamForm" action="/process" method="post" enctype="multipart/form-data">
             <textarea name="dream_description" placeholder="I dreamt I was floating through space, surrounded by colorful nebulae. I saw planets of strange colors and encountered beings made of light..."></textarea>
-            <button type="submit" class="btn">Visualize Dream</button>
+            <button type="submit" class="btn">Visualize Dream (Cloud)</button>
+            <button type="button" class="btn" id="gpuBtn" style="margin-left: 10px; background: #4b6cb7;">Generate with GPU (local)</button>
         </form>
+        
+        <div class="feature-links">
+            <div class="feature-link">
+                <h3>Enhanced Multi-Model Blending</h3>
+                <p>Create unique dream images by blending outputs from multiple AI models</p>
+                <a href="/enhanced">Create Enhanced Images</a>
+            </div>
+            <div class="feature-link">
+                <h3>Advanced Video Generation</h3>
+                <p>Create high-quality animations with custom settings and GPU acceleration</p>
+                <a href="/video">Create Video</a>
+            </div>
+            <div class="feature-link">
+                <h3>View Your History</h3>
+                <p>Browse through your previously generated dream visualizations</p>
+                <a href="/history">View History</a>
+            </div>
+        </div>
     </div>
 
     <footer>
-        <p>Dream Visualizer &copy; 2023 - Built with Rust, Axum, and AI</p>
+        <p>Dream Visualizer &copy; 2025 - Built with Rust, Axum, and AI</p>
     </footer>
+
+    <script src="/static/js/theme.js"></script>
+    <script>
+        document.getElementById('gpuBtn').addEventListener('click', function() {
+            var form = document.getElementById('dreamForm');
+            form.action = '/process_local';
+            form.submit();
+        });
+    </script>
 </body>
 </html> 

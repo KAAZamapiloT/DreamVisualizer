@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Dream Images - Dream Visualizer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .blending-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .option-group {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .model-selection {
+            margin-bottom: 15px;
+        }
+        
+        .model-checkbox {
+            margin-right: 10px;
+        }
+        
+        #imageResults {
+            margin-top: 20px;
+        }
+        
+        .result-tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .image-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .image-card img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+        }
+        
+        .image-info {
+            padding: 10px;
+        }
+        
+        .spinner {
+            margin: 30px auto;
+            width: 70px;
+            text-align: center;
+        }
+        
+        .spinner > div {
+            width: 18px;
+            height: 18px;
+            background-color: var(--primary);
+            border-radius: 100%;
+            display: inline-block;
+            animation: sk-bouncedelay 1.4s infinite ease-in-out both;
+        }
+        
+        .spinner .bounce1 {
+            animation-delay: -0.32s;
+        }
+        
+        .spinner .bounce2 {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes sk-bouncedelay {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Enhanced Dream Imagery</h1>
+        <p class="subtitle">Generate unique images by blending multiple AI models</p>
+    </header>
+
+    <div class="nav">
+        <a href="/">Home</a>
+        <a href="/images">Advanced Images</a>
+        <a href="/enhanced" class="active">Enhanced Images</a>
+        <a href="/video">Advanced Video</a>
+        <a href="/history">History</a>
+        <a href="/learning">Learning Dashboard</a>
+        <div class="nav-right">
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" />
+                    <div class="slider round"></div>
+                </label>
+                <span style="margin-left: 10px">Dark Mode</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Blend Multiple Model Outputs</h2>
+        <p>Create unique dream visualizations by combining the outputs of multiple AI models.</p>
+        
+        <form id="enhancedImageForm">
+            <label for="dreamPrompt">Enter your dream description:</label>
+            <textarea id="dreamPrompt" name="prompt" placeholder="I dreamt I was exploring an ancient temple with glowing crystals and strange symbols carved into the walls..." required></textarea>
+            
+            <div class="blending-options">
+                <div class="option-group">
+                    <h3>Select AI Models</h3>
+                    <p>Choose which models to blend (2+ recommended)</p>
+                    <div class="model-selection">
+                        <label><input type="checkbox" class="model-checkbox" value="sd21" checked> Stable Diffusion 2.1</label><br>
+                        <label><input type="checkbox" class="model-checkbox" value="sdxl" checked> Stable Diffusion XL</label><br>
+                        <label><input type="checkbox" class="model-checkbox" value="sd15"> Stable Diffusion 1.5</label><br>
+                        <label><input type="checkbox" class="model-checkbox" value="dreamshaper"> Dreamshaper</label><br>
+                        <label><input type="checkbox" class="model-checkbox" value="openjourney"> Openjourney</label><br>
+                        <label><input type="checkbox" class="model-checkbox" value="realistic"> Dreamlike Photoreal</label><br>
+                        <label><input type="checkbox" class="model-checkbox" value="deliberate"> Deliberate</label>
+                    </div>
+                </div>
+                
+                <div class="option-group">
+                    <h3>Blending Options</h3>
+                    <div class="form-group">
+                        <label for="blendMode">Blend Mode:</label>
+                        <select id="blendMode" name="blend_mode">
+                            <option value="soft_light">Soft Light (Default)</option>
+                            <option value="hard_light">Hard Light</option>
+                            <option value="overlay">Overlay</option>
+                            <option value="screen">Screen</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="difference">Difference</option>
+                            <option value="luminosity">Luminosity</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="enhancement">Enhancement Level:</label>
+                        <input type="range" id="enhancement" name="enhancement" min="1.0" max="1.5" step="0.1" value="1.2">
+                        <span id="enhancementValue">1.2</span>
+                    </div>
+                </div>
+                
+                <div class="option-group">
+                    <h3>Quality Settings</h3>
+                    <div class="form-group">
+                        <label for="quality">Quality:</label>
+                        <select id="quality" name="quality">
+                            <option value="standard">Standard (Faster)</option>
+                            <option value="high" selected>High (Balanced)</option>
+                            <option value="ultra">Ultra (Slower)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="width">Width:</label>
+                        <select id="width" name="width">
+                            <option value="384">384px (Low Memory)</option>
+                            <option value="512" selected>512px (Standard)</option>
+                            <option value="768">768px (High Quality)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="height">Height:</label>
+                        <select id="height" name="height">
+                            <option value="384">384px (Low Memory)</option>
+                            <option value="512" selected>512px (Standard)</option>
+                            <option value="768">768px (High Quality)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><input type="checkbox" id="saveAll" name="save_all"> Save individual model outputs</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="seed">Random Seed (optional):</label>
+                <input type="number" id="seed" name="seed" placeholder="Leave empty for random">
+            </div>
+            
+            <button type="submit" class="btn" id="generateBtn">Generate Enhanced Images</button>
+        </form>
+        
+        <div id="loading" style="display: none; text-align: center; margin-top: 30px;">
+            <h3>Generating Enhanced Images...</h3>
+            <p>This may take several minutes depending on model selection and quality settings.</p>
+            <div class="spinner">
+                <div class="bounce1"></div>
+                <div class="bounce2"></div>
+                <div class="bounce3"></div>
+            </div>
+        </div>
+        
+        <div id="imageResults" style="display: none;">
+            <h2>Generated Results</h2>
+            
+            <div class="result-tabs">
+                <div class="tab active" data-tab="final">Final Enhanced Images</div>
+                <div class="tab" data-tab="individual">Individual Model Outputs</div>
+                <div class="tab" data-tab="blending">Blending Steps</div>
+            </div>
+            
+            <div id="finalTab" class="tab-content active">
+                <div class="image-grid" id="finalImages"></div>
+            </div>
+            
+            <div id="individualTab" class="tab-content">
+                <div class="image-grid" id="individualImages"></div>
+            </div>
+            
+            <div id="blendingTab" class="tab-content">
+                <div class="image-grid" id="blendingImages"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Dream Visualizer &copy; 2025 - Built with Rust, Axum, and AI</p>
+    </footer>
+
+    <script src="/static/js/theme.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update enhancement value display
+            const enhancementSlider = document.getElementById('enhancement');
+            const enhancementValue = document.getElementById('enhancementValue');
+            
+            enhancementSlider.addEventListener('input', function() {
+                enhancementValue.textContent = this.value;
+            });
+            
+            // Tab switching
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Hide all tab content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Show selected tab content
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId + 'Tab').classList.add('active');
+                });
+            });
+            
+            // Form submission
+            document.getElementById('enhancedImageForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get selected models
+                const selectedModels = [];
+                document.querySelectorAll('.model-checkbox:checked').forEach(checkbox => {
+                    selectedModels.push(checkbox.value);
+                });
+                
+                if (selectedModels.length < 2) {
+                    alert('Please select at least 2 models for blending');
+                    return;
+                }
+                
+                // Collect form data
+                const formData = {
+                    prompt: document.getElementById('dreamPrompt').value,
+                    models: selectedModels.join(','),
+                    blend_mode: document.getElementById('blendMode').value,
+                    quality: document.getElementById('quality').value,
+                    width: parseInt(document.getElementById('width').value),
+                    height: parseInt(document.getElementById('height').value),
+                    enhancement: parseFloat(document.getElementById('enhancement').value),
+                    save_all: document.getElementById('saveAll').checked
+                };
+                
+                // Add seed if provided
+                const seedValue = document.getElementById('seed').value;
+                if (seedValue.trim() !== '') {
+                    formData.seed = parseInt(seedValue);
+                }
+                
+                // Show loading spinner
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('imageResults').style.display = 'none';
+                
+                // Clear previous results
+                document.getElementById('finalImages').innerHTML = '';
+                document.getElementById('individualImages').innerHTML = '';
+                document.getElementById('blendingImages').innerHTML = '';
+                
+                // Submit request
+                fetch('/generate_enhanced_images', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error generating images');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading spinner
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('imageResults').style.display = 'block';
+                    
+                    // Display final images
+                    const finalImagesDiv = document.getElementById('finalImages');
+                    data.images.forEach(imagePath => {
+                        const imageCard = document.createElement('div');
+                        imageCard.className = 'image-card';
+                        
+                        const img = document.createElement('img');
+                        img.src = imagePath;
+                        img.alt = 'Enhanced Dream Image';
+                        
+                        const info = document.createElement('div');
+                        info.className = 'image-info';
+                        info.innerHTML = `<strong>Blend Mode:</strong> ${data.blend_mode}<br><strong>Quality:</strong> ${data.quality}`;
+                        
+                        imageCard.appendChild(img);
+                        imageCard.appendChild(info);
+                        finalImagesDiv.appendChild(imageCard);
+                    });
+                    
+                    // Display individual model outputs if available
+                    if (data.individual_model_images && data.individual_model_images.length > 0) {
+                        const individualImagesDiv = document.getElementById('individualImages');
+                        data.individual_model_images.forEach(imagePath => {
+                            const imageCard = document.createElement('div');
+                            imageCard.className = 'image-card';
+                            
+                            const img = document.createElement('img');
+                            img.src = imagePath;
+                            const modelName = imagePath.split('_').pop().split('.')[0];
+                            img.alt = `Model: ${modelName}`;
+                            
+                            const info = document.createElement('div');
+                            info.className = 'image-info';
+                            info.innerHTML = `<strong>Model:</strong> ${modelName}`;
+                            
+                            imageCard.appendChild(img);
+                            imageCard.appendChild(info);
+                            individualImagesDiv.appendChild(imageCard);
+                        });
+                    }
+                    
+                    // Display blending steps if available
+                    if (data.intermediate_blends && data.intermediate_blends.length > 0) {
+                        const blendingImagesDiv = document.getElementById('blendingImages');
+                        data.intermediate_blends.forEach((imagePath, idx) => {
+                            const imageCard = document.createElement('div');
+                            imageCard.className = 'image-card';
+                            
+                            const img = document.createElement('img');
+                            img.src = imagePath;
+                            img.alt = `Blend Step ${idx + 1}`;
+                            
+                            const info = document.createElement('div');
+                            info.className = 'image-info';
+                            info.innerHTML = `<strong>Step:</strong> ${idx + 1}`;
+                            
+                            imageCard.appendChild(img);
+                            imageCard.appendChild(info);
+                            blendingImagesDiv.appendChild(imageCard);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('loading').style.display = 'none';
+                    alert('An error occurred while generating images. Check GPU memory or try with fewer models/lower quality settings.');
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

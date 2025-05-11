@@ -4,137 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ dream.processed_data.title }} - Dream Visualizer</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 1rem;
-            background-color: #f9f9ff;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-            padding: 1rem;
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        h1, h2, h3 {
-            margin-top: 0;
-        }
-        .container {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            margin-bottom: 2rem;
-        }
-        .btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
-        }
-        .nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-        .nav a {
-            color: #6e8efb;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .nav a:hover {
-            text-decoration: underline;
-        }
-        .dream-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-        .dream-meta {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .dream-meta .label {
-            font-weight: bold;
-            width: 100px;
-        }
-        .elements {
-            margin-top: 1rem;
-        }
-        .element {
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #eee;
-        }
-        .element:last-child {
-            border-bottom: none;
-        }
-        .color-palette {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-        .color {
-            width: 50px;
-            height: 50px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        .video-section {
-            margin-top: 2rem;
-        }
-        video {
-            width: 100%;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .image-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        .image-item {
-            overflow: hidden;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .image-item img {
-            width: 100%;
-            height: auto;
-            display: block;
-            transition: transform 0.3s ease;
-        }
-        .image-item img:hover {
-            transform: scale(1.05);
-        }
-        footer {
-            text-align: center;
-            margin-top: 2rem;
-            color: #777;
-            font-size: 0.9rem;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <header>
@@ -144,14 +14,72 @@
 
     <div class="nav">
         <a href="/">Home</a>
-        <a href="/history">View History</a>
+        <div class="nav-right">
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" />
+                    <div class="slider round"></div>
+                </label>
+                <span style="margin-left: 10px">Dark Mode</span>
+            </div>
+            <a href="/history" style="margin-left: 20px">View History</a>
+        </div>
     </div>
 
     <div class="container">
         <div class="dream-info">
             <div class="dream-details">
                 <h2>Dream Interpretation</h2>
-                <p>{{ dream.processed_data.summary }}</p>
+                <p id="dream-summary">{{ dream.processed_data.summary }}</p>
+                
+                <!-- Story Generation Section -->
+                <div class="story-generation" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed var(--border-color);">
+                    <h3>Create a Story from Your Dream</h3>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <label>
+                            <input type="radio" name="story-type" value="sequel" checked> Sequel (what happens next)
+                        </label>
+                        <label>
+                            <input type="radio" name="story-type" value="prequel"> Prequel (what happened before)
+                        </label>
+                        <label>
+                            <input type="radio" name="story-type" value="continuation"> Continuation (flow of the dream)
+                        </label>
+                    </div>
+                    <button id="generateStoryBtn" class="btn" style="background: linear-gradient(135deg, #2b5876, #4e4376);">Generate Dream Story</button>
+                    <div id="storyOutput" style="margin-top: 1rem; display: none;">
+                        <h4 id="storyTitle" style="margin-bottom: 0.5rem;"></h4>
+                        <div id="storyContent" style="white-space: pre-line; line-height: 1.6; background-color: rgba(0,0,0,0.03); padding: 1rem; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                
+                <!-- GPU Image Generation Button -->
+                <div style="display: flex; gap: 10px; margin-top: 1rem;">
+                    <button id="gpuGenBtn" class="btn" style="background: #4b6cb7;">Generate Images (GPU)</button>
+                    <button id="gifGenBtn" class="btn" style="background: #6b4c7e;">Generate Animation</button>
+                </div>
+                <div id="gpu-images" style="margin-top: 1.5rem;"></div>
+                <div id="gif-container" style="margin-top: 1.5rem; display: none;">
+                    <h4>Dream Animation</h4>
+                    <div class="animation-tabs" style="margin-bottom: 10px;">
+                        <button id="gif-tab" class="tab-btn active" style="padding: 5px 10px; border: none; background: #4b6cb7; color: white; border-radius: 4px 0 0 4px;">GIF</button>
+                        <button id="video-tab" class="tab-btn" style="padding: 5px 10px; border: none; background: #ccc; color: #333; border-radius: 0 4px 4px 0;">Video</button>
+                    </div>
+                    <div id="gif-view">
+                        <img id="gif-result" src="" alt="Generated dream animation" style="max-width: 100%; border-radius: 8px; box-shadow: var(--box-shadow);">
+                    </div>
+                    <div id="video-view" style="display: none;">
+                        <video id="video-result" controls style="max-width: 100%; border-radius: 8px; box-shadow: var(--box-shadow);">
+                            <source src="" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    <div class="gif-frames" style="display: flex; flex-wrap: nowrap; overflow-x: auto; margin-top: 0.5rem; gap: 4px;"></div>
+                    <div style="margin-top: 0.5rem; display: flex; gap: 10px;">
+                        <a id="gif-download" href="" download class="btn" style="display: inline-block; background: #333;">Download GIF</a>
+                        <a id="video-download" href="" download class="btn" style="display: none; background: #333;">Download MP4</a>
+                    </div>
+                </div>
 
                 <div class="dream-meta">
                     <span class="label">Mood:</span>
@@ -205,24 +133,716 @@
     </div>
     {% endif %}
 
+    {% if images %}
     <div class="container">
         <h2>Generated Images</h2>
         <div class="image-gallery">
-            {% for image in image_paths %}
+            {% for image in images %}
             <div class="image-item">
-                <img src="{{ image }}" alt="Dream visual {{ loop.index }}">
+                <img src="{{ image }}" alt="Dream visualization image">
             </div>
             {% endfor %}
         </div>
     </div>
+    {% endif %}
 
-    <div class="container">
-        <h2>Original Dream Description</h2>
-        <p>{{ dream.input_text }}</p>
+    <!-- Feedback System -->
+    <div class="container" style="margin-top: 2rem;">
+        <h2>Was this dream interpretation helpful?</h2>
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <button id="feedbackHelpful" class="btn" style="background: #4CAF50;">Yes, it was helpful</button>
+            <button id="feedbackNotHelpful" class="btn" style="background: #f44336;">No, it wasn't helpful</button>
+        </div>
+        <div id="feedbackForm" style="margin-top: 1rem; display: none;">
+            <textarea id="feedbackComments" placeholder="Any additional comments? (optional)" style="width: 100%; min-height: 100px;"></textarea>
+            <button id="submitFeedback" class="btn" style="margin-top: 0.5rem;">Submit Feedback</button>
+        </div>
+        <div id="feedbackThanks" style="margin-top: 1rem; display: none;">
+            <p>Thank you for your feedback!</p>
+        </div>
     </div>
 
     <footer>
         <p>Dream Visualizer &copy; 2023 - Built with Rust, Axum, and AI</p>
     </footer>
+
+    <script src="/static/js/theme.js"></script>
+    <script>
+        document.getElementById('generateStoryBtn').addEventListener('click', async function() {
+            const btn = this;
+            const storyOutput = document.getElementById('storyOutput');
+            const storyTitle = document.getElementById('storyTitle');
+            const storyContent = document.getElementById('storyContent');
+            const summary = document.getElementById('dream-summary').textContent;
+            const storyType = document.querySelector('input[name="story-type"]:checked').value;
+            
+            // Update UI state
+            btn.disabled = true;
+            btn.textContent = 'Generating Story...';
+            storyOutput.style.display = 'none';
+            
+            try {
+                const resp = await fetch('/generate_story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: summary,
+                        story_type: storyType
+                    })
+                });
+                
+                if (!resp.ok) {
+                    throw new Error('Failed to generate story');
+                }
+                
+                const data = await resp.json();
+                
+                // Show the story
+                if (data.story) {
+                    const typeMap = {
+                        'sequel': 'What Happens Next',
+                        'prequel': 'What Happened Before',
+                        'continuation': 'Dream Continuation'
+                    };
+                    
+                    storyTitle.textContent = typeMap[storyType] || 'Dream Story';
+                    storyContent.textContent = data.story;
+                    storyOutput.style.display = 'block';
+                    
+                    // Add save functionality
+                    // Store in buffer and show save button
+                    fetch('/buffer_content', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            content_type: 'story',
+                            data: data.story,
+                            metadata: { title: storyTitle.textContent, type: storyType }
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.buffer_id) {
+                            // Show save button
+                            let saveBtn = document.createElement('button');
+                            saveBtn.className = 'btn';
+                            saveBtn.style.marginTop = '10px';
+                            saveBtn.style.background = '#007bff';
+                            saveBtn.textContent = 'Save Story to Disk';
+                            saveBtn.onclick = function() {
+                                // Get custom filename
+                                const filename = prompt('Enter a filename (optional):', 'dream_story');
+                                if (filename !== null) {  // Only proceed if they didn't cancel
+                                    fetch('/save_buffered_content', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            buffer_id: data.buffer_id,
+                                            filename: filename || undefined
+                                        })
+                                    })
+                                    .then(response => response.json())
+                                    .then(result => {
+                                        if (result.success) {
+                                            saveBtn.textContent = 'Story Saved!';
+                                            saveBtn.disabled = true;
+                                            // Add download link
+                                            let downloadLink = document.createElement('a');
+                                            downloadLink.href = result.file_path;
+                                            downloadLink.download = '';
+                                            downloadLink.className = 'btn';
+                                            downloadLink.style.marginLeft = '10px';
+                                            downloadLink.style.background = '#28a745';
+                                            downloadLink.textContent = 'Download Story';
+                                            saveBtn.parentNode.appendChild(downloadLink);
+                                        } else {
+                                            saveBtn.textContent = 'Save Failed, Try Again';
+                                            setTimeout(() => {
+                                                saveBtn.textContent = 'Save Story to Disk';
+                                            }, 3000);
+                                        }
+                                    })
+                                    .catch(err => {
+                                        saveBtn.textContent = 'Error Saving';
+                                        console.error('Error saving story:', err);
+                                    });
+                                }
+                            };
+                            storyOutput.appendChild(saveBtn);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error buffering story:', err);
+                    });
+                }
+            } catch (err) {
+                console.error('Error generating story:', err);
+                storyContent.textContent = 'Sorry, there was an error generating your story. Please try again.';
+                storyTitle.textContent = 'Error';
+                storyOutput.style.display = 'block';
+            } finally {
+                btn.textContent = 'Generate Dream Story';
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('gpuGenBtn').addEventListener('click', async function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            const summary = document.getElementById('dream-summary').textContent;
+            const resp = await fetch('/generate_images_local', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: summary })
+            });
+            if (!resp.ok) {
+                btn.textContent = 'Error! Try Again';
+                btn.disabled = false;
+                return;
+            }
+            const data = await resp.json();
+            const container = document.getElementById('gpu-images');
+            container.innerHTML = '';
+            if (data.images && data.images.length > 0) {
+                data.images.forEach(img => {
+                    const div = document.createElement('div');
+                    div.className = 'image-item';
+                    
+                    // Create image element
+                    const imgElem = document.createElement('img');
+                    imgElem.src = img;
+                    imgElem.alt = "GPU generated dream image";
+                    div.appendChild(imgElem);
+                    
+                    // Add a container for buttons
+                    const btnContainer = document.createElement('div');
+                    btnContainer.style.display = 'flex';
+                    btnContainer.style.gap = '8px';
+                    btnContainer.style.marginTop = '0.5rem';
+                    
+                    // Instead of direct download, we'll buffer the image first
+                    fetch(img)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            // Convert blob to base64
+                            const reader = new FileReader();
+                            reader.readAsDataURL(blob);
+                            reader.onloadend = function() {
+                                const base64data = reader.result.split(',')[1]; // remove data URL prefix
+                                
+                                // Store in buffer
+                                fetch('/buffer_content', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        content_type: 'image',
+                                        data: base64data,
+                                        metadata: { source: 'gpu' }
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(bufferData => {
+                                    if (bufferData.buffer_id) {
+                                        // Create save button
+                                        const saveBtn = document.createElement('button');
+                                        saveBtn.className = 'btn';
+                                        saveBtn.style.flex = '1';
+                                        saveBtn.style.background = '#007bff';
+                                        saveBtn.textContent = 'Save to Disk';
+                                        saveBtn.onclick = function() {
+                                            // Get custom filename
+                                            const filename = prompt('Enter a filename (optional):', 'dream_image');
+                                            if (filename !== null) {  // Only proceed if they didn't cancel
+                                                saveBtn.textContent = 'Saving...';
+                                                saveBtn.disabled = true;
+                                                
+                                                fetch('/save_buffered_content', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        buffer_id: bufferData.buffer_id,
+                                                        filename: filename || undefined
+                                                    })
+                                                })
+                                                .then(response => response.json())
+                                                .then(result => {
+                                                    if (result.success) {
+                                                        saveBtn.textContent = 'Saved!';
+                                                        
+                                                        // Create download link for saved file
+                                                        const downloadLink = document.createElement('a');
+                                                        downloadLink.href = result.file_path;
+                                                        downloadLink.download = '';
+                                                        downloadLink.className = 'btn';
+                                                        downloadLink.style.flex = '1';
+                                                        downloadLink.style.background = '#28a745';
+                                                        downloadLink.textContent = 'Download';
+                                                        btnContainer.appendChild(downloadLink);
+                                                    } else {
+                                                        saveBtn.textContent = 'Save Failed';
+                                                        saveBtn.disabled = false;
+                                                        setTimeout(() => {
+                                                            saveBtn.textContent = 'Save to Disk';
+                                                        }, 3000);
+                                                    }
+                                                })
+                                                .catch(err => {
+                                                    console.error('Error saving image:', err);
+                                                    saveBtn.textContent = 'Error';
+                                                    saveBtn.disabled = false;
+                                                    setTimeout(() => {
+                                                        saveBtn.textContent = 'Save to Disk';
+                                                    }, 3000);
+                                                });
+                                            }
+                                        };
+                                        btnContainer.appendChild(saveBtn);
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Error buffering image:', err);
+                                    // Fallback to direct download if buffering fails
+                                    const downloadLink = document.createElement('a');
+                                    downloadLink.href = img;
+                                    downloadLink.download = '';
+                                    downloadLink.className = 'btn';
+                                    downloadLink.style.width = '100%';
+                                    downloadLink.style.background = '#333';
+                                    downloadLink.textContent = 'Download';
+                                    btnContainer.appendChild(downloadLink);
+                                });
+                            };
+                        })
+                        .catch(err => {
+                            console.error('Error fetching image:', err);
+                            // Fallback to direct download if fetch fails
+                            const downloadLink = document.createElement('a');
+                            downloadLink.href = img;
+                            downloadLink.download = '';
+                            downloadLink.className = 'btn';
+                            downloadLink.style.width = '100%';
+                            downloadLink.style.background = '#333';
+                            downloadLink.textContent = 'Download';
+                            btnContainer.appendChild(downloadLink);
+                        });
+                    
+                    div.appendChild(btnContainer);
+                    container.appendChild(div);
+                });
+                btn.textContent = 'Generate Images (GPU)';
+            } else {
+                container.textContent = 'No images generated.';
+                btn.textContent = 'Generate Images (GPU)';
+            }
+            btn.disabled = false;
+        });
+
+        // Animation generation script
+        document.getElementById('gifGenBtn').addEventListener('click', async function() {
+            const btn = this;
+            const gifContainer = document.getElementById('gif-container');
+            const gifResult = document.getElementById('gif-result');
+            const videoResult = document.getElementById('video-result');
+            const gifDownload = document.getElementById('gif-download');
+            const videoDownload = document.getElementById('video-download');
+            const gifFramesContainer = document.querySelector('.gif-frames');
+            
+            // Show options dialog
+            const useAdvanced = confirm("Would you like to use advanced animation options?");
+            
+            let options = {
+                prompt: document.getElementById('dream-summary').textContent,
+                num_frames: 4,
+                fps: 10.0,
+                format: 'gif'
+            };
+            
+            if (useAdvanced) {
+                // Prompt for advanced options
+                const outputFormat = prompt("Output format (gif, mp4, both):", "gif");
+                if (outputFormat !== null && ['gif', 'mp4', 'both'].includes(outputFormat.toLowerCase())) {
+                    options.format = outputFormat.toLowerCase();
+                }
+                
+                const numFrames = prompt("Number of keyframes (2-8, default: 4):", "4");
+                if (numFrames !== null) {
+                    const frames = parseInt(numFrames);
+                    if (!isNaN(frames) && frames >= 2 && frames <= 8) {
+                        options.num_frames = frames;
+                    }
+                }
+                
+                const fps = prompt("Frames per second (1-30, default: 10):", "10");
+                if (fps !== null) {
+                    const fpsVal = parseFloat(fps);
+                    if (!isNaN(fpsVal) && fpsVal >= 1 && fpsVal <= 30) {
+                        options.fps = fpsVal;
+                    }
+                }
+                
+                const seed = prompt("Random seed (optional, for reproducible results):", "");
+                if (seed !== null && seed.trim() !== "") {
+                    const seedVal = parseInt(seed);
+                    if (!isNaN(seedVal)) {
+                        options.seed = seedVal;
+                    }
+                }
+                
+                const model = prompt("Model to use (optional, default: stabilityai/stable-diffusion-2-1):", "stabilityai/stable-diffusion-2-1");
+                if (model !== null && model.trim() !== "") {
+                    options.model = model;
+                }
+                
+                const guidanceScale = prompt("Guidance scale (1-20, default: 7.5, higher values follow prompt more closely):", "7.5");
+                if (guidanceScale !== null) {
+                    const gsVal = parseFloat(guidanceScale);
+                    if (!isNaN(gsVal) && gsVal >= 1 && gsVal <= 20) {
+                        options.guidance_scale = gsVal;
+                    }
+                }
+                
+                const resolution = prompt("Resolution (512 or 768, default: 512):", "512");
+                if (resolution !== null) {
+                    const resVal = parseInt(resolution);
+                    if (!isNaN(resVal) && [512, 768].includes(resVal)) {
+                        options.width = resVal;
+                        options.height = resVal;
+                    }
+                }
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Generating Animation...';
+            gifContainer.style.display = 'none';
+            
+            try {
+                const resp = await fetch('/generate_gif', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(options)
+                });
+                
+                if (!resp.ok) {
+                    throw new Error('Failed to generate animation');
+                }
+                
+                const data = await resp.json();
+                
+                // Setup tab functionality
+                const gifTab = document.getElementById('gif-tab');
+                const videoTab = document.getElementById('video-tab');
+                const gifView = document.getElementById('gif-view');
+                const videoView = document.getElementById('video-view');
+                
+                gifTab.onclick = function() {
+                    gifTab.classList.add('active');
+                    videoTab.classList.remove('active');
+                    gifTab.style.background = '#4b6cb7';
+                    videoTab.style.background = '#ccc';
+                    gifTab.style.color = 'white';
+                    videoTab.style.color = '#333';
+                    gifView.style.display = 'block';
+                    videoView.style.display = 'none';
+                    gifDownload.style.display = 'inline-block';
+                    videoDownload.style.display = 'none';
+                };
+                
+                videoTab.onclick = function() {
+                    videoTab.classList.add('active');
+                    gifTab.classList.remove('active');
+                    videoTab.style.background = '#4b6cb7';
+                    gifTab.style.background = '#ccc';
+                    videoTab.style.color = 'white';
+                    gifTab.style.color = '#333';
+                    videoView.style.display = 'block';
+                    gifView.style.display = 'none';
+                    videoDownload.style.display = 'inline-block';
+                    gifDownload.style.display = 'none';
+                };
+                
+                // Add timestamp to prevent browser caching
+                const cacheBuster = `?t=${Date.now()}`;
+                
+                // Handle GIF if present
+                if (data.gif_path) {
+                    gifResult.src = data.gif_path + cacheBuster;
+                    gifDownload.href = data.gif_path;
+                    gifTab.style.display = 'inline-block';
+                    gifDownload.style.display = 'inline-block';
+                } else {
+                    gifTab.style.display = 'none';
+                    gifDownload.style.display = 'none';
+                }
+                
+                // Handle MP4 if present
+                if (data.mp4_path) {
+                    const videoSource = document.createElement('source');
+                    videoSource.src = data.mp4_path + cacheBuster;
+                    videoSource.type = 'video/mp4';
+                    
+                    // Clear existing sources
+                    videoResult.innerHTML = '';
+                    videoResult.appendChild(videoSource);
+                    videoResult.load(); // Reload video with new source
+                    
+                    videoDownload.href = data.mp4_path;
+                    videoTab.style.display = 'inline-block';
+                    
+                    // If only MP4 is available, show it by default
+                    if (!data.gif_path) {
+                        videoTab.click();
+                    }
+                } else {
+                    videoTab.style.display = 'none';
+                    videoDownload.style.display = 'none';
+                }
+                
+                // Display individual frames if available
+                if (data.frame_paths && data.frame_paths.length > 0) {
+                    gifFramesContainer.innerHTML = '';
+                    data.frame_paths.forEach(path => {
+                        const frameImg = document.createElement('img');
+                        frameImg.src = path + cacheBuster;
+                        frameImg.alt = "Animation frame";
+                        frameImg.style.height = "80px";
+                        frameImg.style.width = "auto";
+                        frameImg.style.borderRadius = "4px";
+                        gifFramesContainer.appendChild(frameImg);
+                    });
+                }
+                
+                // Buffer content for saving
+                if (data.gif_path) {
+                    // Instead of directly setting the download link, we'll buffer the GIF first
+                    fetch(data.gif_path)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            // Convert blob to base64
+                            const reader = new FileReader();
+                            reader.readAsDataURL(blob);
+                            reader.onloadend = function() {
+                                const base64data = reader.result.split(',')[1]; // remove data URL prefix
+                                
+                                // Store in buffer
+                                fetch('/buffer_content', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        content_type: 'gif',
+                                        data: base64data,
+                                        metadata: { 
+                                            frames: data.total_frames || data.frames || 6,
+                                            fps: options.fps,
+                                            prompt: options.prompt
+                                        }
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(bufferData => {
+                                    if (bufferData.buffer_id) {
+                                        // Update download button to use buffered content
+                                        gifDownload.textContent = 'Save GIF to Disk';
+                                        gifDownload.href = 'javascript:void(0)';
+                                        gifDownload.removeAttribute('download');
+                                        gifDownload.onclick = function() {
+                                            // Get custom filename
+                                            const filename = prompt('Enter a filename (optional):', 'dream_animation');
+                                            if (filename !== null) {  // Only proceed if they didn't cancel
+                                                fetch('/save_buffered_content', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        buffer_id: bufferData.buffer_id,
+                                                        filename: filename || undefined
+                                                    })
+                                                })
+                                                .then(response => response.json())
+                                                .then(result => {
+                                                    if (result.success) {
+                                                        // Create new download link
+                                                        let downloadLink = document.createElement('a');
+                                                        downloadLink.href = result.file_path;
+                                                        downloadLink.download = '';
+                                                        downloadLink.className = 'btn';
+                                                        downloadLink.style.marginLeft = '10px';
+                                                        downloadLink.style.background = '#28a745';
+                                                        downloadLink.textContent = 'Download GIF';
+                                                        gifDownload.textContent = 'Saved!';
+                                                        gifDownload.disabled = true;
+                                                        gifDownload.parentNode.appendChild(downloadLink);
+                                                    } else {
+                                                        gifDownload.textContent = 'Save Failed, Try Again';
+                                                        setTimeout(() => {
+                                                            gifDownload.textContent = 'Save GIF to Disk';
+                                                        }, 3000);
+                                                    }
+                                                })
+                                                .catch(err => {
+                                                    gifDownload.textContent = 'Error Saving';
+                                                    console.error('Error saving GIF:', err);
+                                                });
+                                            }
+                                        };
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Error buffering GIF:', err);
+                                });
+                            };
+                        })
+                        .catch(err => {
+                            console.error('Error fetching GIF:', err);
+                        });
+                }
+                
+                // Buffer MP4 video if present
+                if (data.mp4_path) {
+                    fetch(data.mp4_path)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            // Convert blob to base64
+                            const reader = new FileReader();
+                            reader.readAsDataURL(blob);
+                            reader.onloadend = function() {
+                                const base64data = reader.result.split(',')[1]; // remove data URL prefix
+                                
+                                // Store in buffer
+                                fetch('/buffer_content', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        content_type: 'mp4',
+                                        data: base64data,
+                                        metadata: { 
+                                            frames: data.total_frames || data.frames || 6,
+                                            fps: options.fps,
+                                            prompt: options.prompt
+                                        }
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(bufferData => {
+                                    if (bufferData.buffer_id) {
+                                        // Update download button to use buffered content
+                                        videoDownload.textContent = 'Save Video to Disk';
+                                        videoDownload.href = 'javascript:void(0)';
+                                        videoDownload.removeAttribute('download');
+                                        videoDownload.onclick = function() {
+                                            // Get custom filename
+                                            const filename = prompt('Enter a filename (optional):', 'dream_video');
+                                            if (filename !== null) {  // Only proceed if they didn't cancel
+                                                fetch('/save_buffered_content', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                        buffer_id: bufferData.buffer_id,
+                                                        filename: filename || undefined
+                                                    })
+                                                })
+                                                .then(response => response.json())
+                                                .then(result => {
+                                                    if (result.success) {
+                                                        // Create new download link
+                                                        let downloadLink = document.createElement('a');
+                                                        downloadLink.href = result.file_path;
+                                                        downloadLink.download = '';
+                                                        downloadLink.className = 'btn';
+                                                        downloadLink.style.marginLeft = '10px';
+                                                        downloadLink.style.background = '#28a745';
+                                                        downloadLink.textContent = 'Download MP4';
+                                                        videoDownload.textContent = 'Saved!';
+                                                        videoDownload.disabled = true;
+                                                        videoDownload.parentNode.appendChild(downloadLink);
+                                                    } else {
+                                                        videoDownload.textContent = 'Save Failed, Try Again';
+                                                        setTimeout(() => {
+                                                            videoDownload.textContent = 'Save Video to Disk';
+                                                        }, 3000);
+                                                    }
+                                                })
+                                                .catch(err => {
+                                                    videoDownload.textContent = 'Error Saving';
+                                                    console.error('Error saving video:', err);
+                                                });
+                                            }
+                                        };
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Error buffering video:', err);
+                                });
+                            };
+                        })
+                        .catch(err => {
+                            console.error('Error fetching video:', err);
+                        });
+                }
+                                
+                gifContainer.style.display = 'block';
+            } catch (err) {
+                console.error('Error generating animation:', err);
+                alert('Failed to generate animation. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Animation';
+            }
+        });
+        
+        // Feedback system
+        document.getElementById('feedbackHelpful').addEventListener('click', function() {
+            document.getElementById('feedbackForm').style.display = 'block';
+            submitFeedback(true);
+        });
+        
+        document.getElementById('feedbackNotHelpful').addEventListener('click', function() {
+            document.getElementById('feedbackForm').style.display = 'block';
+            // Do not submit yet, wait for comments
+        });
+        
+        document.getElementById('submitFeedback').addEventListener('click', function() {
+            // Determine if helpful based on which button is active
+            const helpful = document.getElementById('feedbackHelpful').classList.contains('active');
+            const comments = document.getElementById('feedbackComments').value;
+            submitFeedback(helpful, comments);
+        });
+        
+        // Add click handlers to set active state on feedback buttons
+        document.getElementById('feedbackHelpful').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('feedbackNotHelpful').classList.remove('active');
+        });
+
+        document.getElementById('feedbackNotHelpful').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('feedbackHelpful').classList.remove('active');
+        });
+        
+        async function submitFeedback(helpful, comments) {
+            try {
+                // Get dream ID from URL
+                const dreamId = window.location.pathname.split('/').pop();
+                
+                const resp = await fetch('/submit_feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dream_id: dreamId,
+                        helpful: helpful,
+                        comments: comments || null
+                    })
+                });
+                
+                if (resp.ok) {
+                    document.getElementById('feedbackForm').style.display = 'none';
+                    document.getElementById('feedbackHelpful').disabled = true;
+                    document.getElementById('feedbackNotHelpful').disabled = true;
+                    document.getElementById('feedbackThanks').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Error submitting feedback:', err);
+            }
+        }
+    </script>
 </body>
 </html> 
