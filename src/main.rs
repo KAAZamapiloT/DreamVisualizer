@@ -3,29 +3,34 @@ mod image;
 mod openai;
 mod video;
 mod web;
+mod learning;
 
 use anyhow::Result;
 use clap::Parser;
-use tracing::{info, Level};
+use tracing::{info, error};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Run in CLI mode
+    /// Run in CLI mode instead of web server
     #[arg(short, long)]
     cli: bool,
-
-    /// Dream description (CLI mode only)
+    
+    /// Dream description (for CLI mode)
     #[arg(short, long)]
     dream: Option<String>,
+    
+    /// Enable AI learning from feedback
+    #[arg(long, default_value_t = true)]
+    enable_learning: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
+    // Initialize tracing
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
+        .with_max_level(tracing::Level::INFO)
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
     
@@ -35,8 +40,19 @@ async fn main() -> Result<()> {
     config::load()?;
     info!("Configuration loaded");
     
-    // Parse command-line arguments
+    // Parse command line arguments
     let args = Args::parse();
+    
+    // Initialize learning system if enabled
+    if args.enable_learning {
+        info!("AI learning system enabled");
+        let learning_system = learning::LearningSystem::new("data/learning")?;
+        
+        // Store learning system in a global state (in a real app, this would be handled better)
+        web::init_learning_system(learning_system);
+    } else {
+        info!("AI learning system disabled");
+    }
     
     if args.cli {
         // CLI mode
@@ -88,21 +104,28 @@ async fn main() -> Result<()> {
         let video_generator = video::VideoGenerator::new();
         
         // Try WebP first (higher quality), fall back to GIF if it fails
-        let animation_path = match video_generator.generate_webp_animation(&image_paths, "data/videos") {
-            Ok(path) => path,
+        match video_generator.generate_webp_animation(&image_paths, "data/videos") {
+            Ok(path) => {
+                println!("\nGenerated Animation: {}", path);
+            },
             Err(err) => {
-                info!("WebP animation failed, falling back to GIF: {}", err);
-                video_generator.generate_video(&image_paths, "data/videos")?
+                error!("Failed to generate WebP animation: {}", err);
+                // Fall back to GIF
+                match video_generator.generate_video(&image_paths, "data/videos") {
+                    Ok(path) => {
+                        println!("\nGenerated Animation: {}", path);
+                    },
+                    Err(err) => {
+                        error!("Failed to generate GIF animation: {}", err);
+                    }
+                }
             }
-        };
+        }
         
-        println!("\nAnimation generated at: {}", animation_path);
-        
+        Ok(())
     } else {
-        // Web mode
+        // Web server mode
         info!("Running in web mode");
-        web::start_server().await?;
+        web::start_server().await
     }
-    
-    Ok(())
 } 

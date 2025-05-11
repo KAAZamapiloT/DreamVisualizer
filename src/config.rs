@@ -97,9 +97,9 @@ pub fn load() -> Result<()> {
         server: ServerConfig {
             host: std::env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string()),
             port: std::env::var("SERVER_PORT")
-                .unwrap_or_else(|_| "3000".to_string())
+                .unwrap_or_else(|_| "3001".to_string())
                 .parse()
-                .unwrap_or(3000),
+                .unwrap_or(3001),
         },
         ffmpeg: FfmpegConfig {
             fps: std::env::var("FFMPEG_FPS")

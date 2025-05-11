@@ -1,0 +1,7 @@
+diffusers
+torch
+transformers
+accelerate
+requests
+imageio
+numpy 
