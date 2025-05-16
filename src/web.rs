@@ -2,7 +2,7 @@ use anyhow::Result;
 use axum::{
     extract::{Multipart, State},
     http::StatusCode,
-    response::{Html, IntoResponse, Redirect},
+    response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
     Router,
     Json,
@@ -165,6 +165,33 @@ struct EnhancedImageGenRequest {
     save_all: Option<bool>,         // Whether to save all intermediate images
 }
 
+#[derive(Deserialize)]
+struct ModifyImageRequest {
+    prompt: String,
+    image_id: String,       // ID of the uploaded temporary image
+    model: Option<String>,  // Model to use
+    strength: Option<f32>,  // Strength of modification
+    steps: Option<u32>,     // Number of inference steps
+    guidance_scale: Option<f32>,  // Guidance scale
+    seed: Option<u64>,      // Random seed
+    enhancement: Option<f32>, // Enhancement level
+}
+
+#[derive(Deserialize)]
+struct InpaintImageRequest {
+    prompt: String,
+    image_id: String,       // ID of the uploaded image
+    mask_id: String,        // ID of the uploaded mask
+    model: Option<String>,  // Model to use
+    steps: Option<u32>,     // Number of inference steps
+    guidance_scale: Option<f32>,  // Guidance scale
+    seed: Option<u64>,      // Random seed
+    enhancement: Option<f32>, // Enhancement level
+}
+
+// Add this import for the middleware
+use tower::ServiceBuilder;
+
 pub async fn start_server() -> Result<()> {
     let cfg = config::get();
     
@@ -176,6 +203,8 @@ pub async fn start_server() -> Result<()> {
         ("history.html", include_str!("../templates/history.html")),
         ("learning.html", include_str!("../templates/learning.html")),
         ("enhanced_images.html", include_str!("../templates/enhanced_images.html")),
+        ("modify_image.html", include_str!("../templates/modify_image.html")),
+        ("inpaint_image.html", include_str!("../templates/inpaint_image.html")),
     ])?;
     
     // Create directories for storing generated content
@@ -184,11 +213,17 @@ pub async fn start_server() -> Result<()> {
     let videos_dir = data_dir.join("videos");
     let stories_dir = data_dir.join("stories");
     let models_dir = data_dir.join("models");
+    let uploads_dir = data_dir.join("uploads");
+    let modified_dir = data_dir.join("modified");
+    let inpainted_dir = data_dir.join("inpainted");
     
     fs::create_dir_all(&images_dir).await?;
     fs::create_dir_all(&videos_dir).await?;
     fs::create_dir_all(&stories_dir).await?;
     fs::create_dir_all(&models_dir).await?;
+    fs::create_dir_all(&uploads_dir).await?;
+    fs::create_dir_all(&modified_dir).await?;
+    fs::create_dir_all(&inpainted_dir).await?;
     
     // Set up app state
     let app_state = AppState {
@@ -230,6 +265,12 @@ pub async fn start_server() -> Result<()> {
         .route("/images", get(image_generation_handler))
         .route("/generate_enhanced_images", post(generate_enhanced_images_handler))
         .route("/enhanced", get(enhanced_image_generation_handler))
+        .route("/upload_image_for_modification", post(upload_image_handler))
+        .route("/modify_image", post(simple_modify_image_handler))
+        .route("/modify", get(modify_image_page_handler))
+        .route("/upload_mask", post(upload_mask_handler))
+        .route("/inpaint_image", post(simple_inpaint_image_handler))
+        .route("/inpaint", get(inpaint_image_page_handler))
         .nest_service("/static", ServeDir::new("static"))
         .nest_service("/data", ServeDir::new("data"))
         .with_state(app_state);
@@ -1007,13 +1048,19 @@ async fn generate_enhanced_images_handler(
     let dream_id = Uuid::new_v4().to_string();
     let output_dir = format!("data/images/{}_enhanced", dream_id);
     
-    // Set up command with all parameters
+    // Create the output directory if it doesn't exist
+    if let Err(e) = std::fs::create_dir_all(&output_dir) {
+        error!("Failed to create output directory: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create output directory").into_response();
+    }
+    
+    // Call the Python script for enhanced image generation
     let mut command = Command::new("python3");
     command.arg("generate_enhanced_images.py")
         .arg("--prompt").arg(&payload.prompt)
         .arg("--output_dir").arg(&output_dir);
     
-    // Add optional parameters if provided
+    // Add optional parameters
     if let Some(models) = &payload.models {
         command.arg("--models").arg(models);
     }
@@ -1026,16 +1073,16 @@ async fn generate_enhanced_images_handler(
         command.arg("--quality").arg(quality);
     }
     
+    if let Some(guidance_scale) = payload.guidance_scale {
+        command.arg("--guidance_scale").arg(&guidance_scale.to_string());
+    }
+    
     if let Some(width) = payload.width {
         command.arg("--width").arg(&width.to_string());
     }
     
     if let Some(height) = payload.height {
         command.arg("--height").arg(&height.to_string());
-    }
-    
-    if let Some(guidance_scale) = payload.guidance_scale {
-        command.arg("--guidance_scale").arg(&guidance_scale.to_string());
     }
     
     if let Some(seed) = payload.seed {
@@ -1046,15 +1093,17 @@ async fn generate_enhanced_images_handler(
         command.arg("--enhancement").arg(&enhancement.to_string());
     }
     
-    if let Some(true) = payload.save_all {
-        command.arg("--save_all");
+    if let Some(save_all) = payload.save_all {
+        if save_all {
+            command.arg("--save_all");
+        }
     }
     
-    // Run the command
-    let python_status = command.status();
-    
-    match python_status {
-        Ok(status) if status.success() => {},
+    // Execute the Python script
+    let _python_status = match command.status() {
+        Ok(status) if status.success() => {
+            // Script executed successfully
+        },
         Ok(status) => {
             error!("Python script failed with status: {}", status);
             return (StatusCode::INTERNAL_SERVER_ERROR, "Enhanced image generation failed").into_response();
@@ -1063,9 +1112,9 @@ async fn generate_enhanced_images_handler(
             error!("Failed to start Python script: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, "Enhanced image generation failed").into_response();
         }
-    }
+    };
     
-    // Collect generated image paths
+    // Collect the generated image paths
     let mut image_paths = Vec::new();
     let mut individual_paths = Vec::new();
     let mut intermediate_paths = Vec::new();
@@ -1073,43 +1122,30 @@ async fn generate_enhanced_images_handler(
     if let Ok(entries) = std::fs::read_dir(&output_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            let path_str = path.to_string_lossy().to_string();
-            
             if let Some(ext) = path.extension() {
-                if ext == "png" {
-                    let relative_path = path_str.replace("data/", "/data/");
+                if ext == "png" || ext == "jpg" || ext == "webp" {
+                    let path_str = path.display().to_string();
                     
-                    if path_str.contains("enhanced") {
-                        image_paths.push(relative_path);
-                    } else if path_str.contains("blend_step") {
-                        intermediate_paths.push(relative_path);
+                    // Categorize by filename pattern
+                    if path_str.contains("_intermediate_") {
+                        intermediate_paths.push(path_str);
+                    } else if path_str.contains("_model_") {
+                        individual_paths.push(path_str);
+                    } else {
+                        image_paths.push(path_str);
                     }
                 }
             }
         }
-        image_paths.sort();
-        intermediate_paths.sort();
     }
     
-    // Check for individual model outputs
-    let individual_dir = format!("{}/individual_models", output_dir);
-    if std::path::Path::new(&individual_dir).exists() {
-        if let Ok(entries) = std::fs::read_dir(&individual_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if let Some(ext) = path.extension() {
-                    if ext == "png" {
-                        let relative_path = path.to_string_lossy().replace("data/", "/data/");
-                        individual_paths.push(relative_path);
-                    }
-                }
-            }
-            individual_paths.sort();
-        }
-    }
+    // Sort paths for consistent ordering
+    image_paths.sort();
+    individual_paths.sort();
+    intermediate_paths.sort();
     
     // Create a buffer ID for saving the content
-    let content = BufferedContent {
+    let _content = BufferedContent {
         id: dream_id.clone(),
         content_type: "enhanced_image".to_string(),
         data: if !image_paths.is_empty() { image_paths[0].clone() } else { "".to_string() },
@@ -1126,13 +1162,13 @@ async fn generate_enhanced_images_handler(
     };
     
     // Return JSON with paths
-    axum::Json(serde_json::json!({
-        "images": image_paths,
-        "individual_model_images": individual_paths,
-        "intermediate_blends": intermediate_paths,
-        "buffer_id": dream_id,
-        "quality": payload.quality.unwrap_or_else(|| "high".to_string()),
-        "blend_mode": payload.blend_mode.unwrap_or_else(|| "soft_light".to_string())
+    Json(serde_json::json!({
+        "success": true,
+        "dream_id": dream_id,
+        "message": "Enhanced images have been generated successfully",
+        "images": image_paths.iter().map(|p| p.replace("data/", "/data/")).collect::<Vec<String>>(),
+        "individual_images": individual_paths.iter().map(|p| p.replace("data/", "/data/")).collect::<Vec<String>>(),
+        "intermediate_images": intermediate_paths.iter().map(|p| p.replace("data/", "/data/")).collect::<Vec<String>>()
     })).into_response()
 }
 
@@ -1145,4 +1181,369 @@ async fn enhanced_image_generation_handler(State(state): State<AppState>) -> imp
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+async fn upload_image_handler(
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut image_data = None;
+    let mut image_name = String::new();
+    
+    while let Some(field) = multipart.next_field().await.unwrap_or(None) {
+        if field.name().unwrap_or("") == "image" {
+            image_name = field.file_name().unwrap_or("upload.jpg").to_string();
+            image_data = field.bytes().await.ok();
+        }
+    }
+    
+    if let Some(data) = image_data {
+        // Generate a unique ID for the uploaded image
+        let image_id = Uuid::new_v4().to_string();
+        let dir_path = format!("data/uploads/{}", image_id);
+        let file_path = format!("{}/{}", dir_path, image_name);
+        
+        // Create directory for upload
+        if let Err(e) = fs::create_dir_all(&dir_path).await {
+            error!("Failed to create upload directory: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save uploaded image").into_response();
+        }
+        
+        // Save the uploaded image
+        if let Err(e) = fs::write(&file_path, &data).await {
+            error!("Failed to save uploaded file: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save uploaded image").into_response();
+        }
+        
+        // Create a buffered content entry
+        let buffer_id = image_id.clone();
+        let buffered_content = BufferedContent {
+            id: buffer_id.clone(),
+            content_type: "uploaded_image".to_string(),
+            data: file_path.clone(),
+            metadata: serde_json::json!({
+                "original_filename": image_name,
+                "size": data.len(),
+                "upload_time": chrono::Utc::now().to_rfc3339()
+            }),
+            timestamp: chrono::Utc::now(),
+            expires_at: chrono::Utc::now() + chrono::Duration::hours(24),
+        };
+        
+        // Store in buffer
+        state.temp_buffer.lock().unwrap().insert(buffer_id.clone(), buffered_content);
+        
+        // Return the image ID and path
+        return Json(serde_json::json!({
+            "success": true,
+            "image_id": image_id,
+            "file_path": file_path.replace("data/", "/data/") 
+        })).into_response();
+    }
+    
+    (StatusCode::BAD_REQUEST, "No image uploaded").into_response()
+}
+
+async fn modify_image_page_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let context = Context::new();
+    match state.templates.render("modify_image.html", &context) {
+        Ok(html) => Html(html).into_response(),
+        Err(err) => {
+            error!("Template error: {}", err);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+// Upload mask image handler
+async fn upload_mask_handler(
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut image_data = None;
+    let mut image_name = String::new();
+    
+    while let Some(field) = multipart.next_field().await.unwrap_or(None) {
+        if field.name().unwrap_or("") == "mask" {
+            image_name = field.file_name().unwrap_or("mask.png").to_string();
+            image_data = field.bytes().await.ok();
+        }
+    }
+    
+    if let Some(data) = image_data {
+        // Generate a unique ID for the uploaded mask
+        let mask_id = Uuid::new_v4().to_string();
+        let dir_path = format!("data/uploads/{}", mask_id);
+        let file_path = format!("{}/{}", dir_path, image_name);
+        
+        // Create directory for upload
+        if let Err(e) = fs::create_dir_all(&dir_path).await {
+            error!("Failed to create mask upload directory: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save uploaded mask").into_response();
+        }
+        
+        // Save the uploaded mask
+        if let Err(e) = fs::write(&file_path, &data).await {
+            error!("Failed to save uploaded mask: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save uploaded mask").into_response();
+        }
+        
+        // Create a buffered content entry
+        let buffer_id = mask_id.clone();
+        let buffered_content = BufferedContent {
+            id: buffer_id.clone(),
+            content_type: "mask_image".to_string(),
+            data: file_path.clone(),
+            metadata: serde_json::json!({
+                "original_filename": image_name,
+                "size": data.len(),
+                "upload_time": chrono::Utc::now().to_rfc3339()
+            }),
+            timestamp: chrono::Utc::now(),
+            expires_at: chrono::Utc::now() + chrono::Duration::hours(24),
+        };
+        
+        // Store in buffer
+        state.temp_buffer.lock().unwrap().insert(buffer_id.clone(), buffered_content);
+        
+        // Return the mask ID and path
+        return Json(serde_json::json!({
+            "success": true,
+            "mask_id": mask_id,
+            "file_path": file_path.replace("data/", "/data/") 
+        })).into_response();
+    }
+    
+    (StatusCode::BAD_REQUEST, "No mask uploaded").into_response()
+}
+
+// Inpaint page handler
+async fn inpaint_image_page_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let context = Context::new();
+    match state.templates.render("inpaint_image.html", &context) {
+        Ok(html) => Html(html).into_response(),
+        Err(err) => {
+            error!("Template error: {}", err);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+// Create wrapper functions that correctly drop the mutex guards before async operations
+async fn simple_modify_image_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ModifyImageRequest>,
+) -> impl IntoResponse {
+    // Clone the necessary data from the buffer
+    let (input_image_path, image_id) = {
+        let buffer = state.temp_buffer.lock().unwrap();  // Lock mutex
+        if let Some(content) = buffer.get(&payload.image_id) {
+            (content.data.clone(), payload.image_id.clone())
+        } else {
+            drop(buffer);  // Explicitly drop the mutex guard
+            return (StatusCode::NOT_FOUND, "Uploaded image not found").into_response();
+        }
+    };  // Mutex guard goes out of scope here
+    
+    // Create a unique ID for the modified image
+    let output_id = Uuid::new_v4().to_string();
+    let output_dir = format!("data/modified/{}", output_id);
+    let output_path = format!("{}/modified.png", output_dir);
+    
+    // Create output directory - this is the async operation
+    if let Err(e) = tokio::fs::create_dir_all(&output_dir).await {
+        error!("Failed to create output directory: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create output directory").into_response();
+    }
+    
+    // Build command to modify image
+    let mut command = Command::new("python3");
+    command.arg("modify_dream_image.py")
+        .arg("--input_image").arg(&input_image_path)
+        .arg("--prompt").arg(&payload.prompt)
+        .arg("--output_path").arg(&output_path);
+    
+    // Add optional parameters
+    if let Some(model) = &payload.model {
+        command.arg("--model").arg(model);
+    }
+    
+    if let Some(strength) = payload.strength {
+        command.arg("--strength").arg(&strength.to_string());
+    }
+    
+    if let Some(steps) = payload.steps {
+        command.arg("--steps").arg(&steps.to_string());
+    }
+    
+    if let Some(guidance_scale) = payload.guidance_scale {
+        command.arg("--guidance_scale").arg(&guidance_scale.to_string());
+    }
+    
+    if let Some(seed) = payload.seed {
+        command.arg("--seed").arg(&seed.to_string());
+    }
+    
+    if let Some(enhancement) = payload.enhancement {
+        command.arg("--enhancement").arg(&enhancement.to_string());
+    }
+    
+    // Execute the image modification
+    let python_status = match command.status() {
+        Ok(status) => status,
+        Err(e) => {
+            error!("Failed to start image modification script: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to start image modification").into_response();
+        }
+    };
+    
+    if !python_status.success() {
+        error!("Image modification script failed with status: {}", python_status);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Image modification failed").into_response();
+    }
+    
+    // Create the buffer result
+    let buffered_result = BufferedContent {
+        id: output_id.clone(),
+        content_type: "modified_image".to_string(),
+        data: output_path.clone(),
+        metadata: serde_json::json!({
+            "original_image_id": image_id,
+            "prompt": payload.prompt,
+            "model": payload.model,
+            "strength": payload.strength,
+            "modification_time": chrono::Utc::now().to_rfc3339()
+        }),
+        timestamp: chrono::Utc::now(),
+        expires_at: chrono::Utc::now() + chrono::Duration::hours(24),
+    };
+    
+    // Store the result in the buffer with a new lock
+    {
+        let mut buffer = state.temp_buffer.lock().unwrap();
+        buffer.insert(output_id.clone(), buffered_result);
+    }
+    
+    // Return success with the image paths
+    Json(serde_json::json!({
+        "success": true,
+        "original_image": input_image_path.replace("data/", "/data/"),
+        "modified_image": output_path.replace("data/", "/data/"),
+        "buffer_id": output_id
+    })).into_response()
+}
+
+// Simple inpaint handler
+async fn simple_inpaint_image_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<InpaintImageRequest>,
+) -> impl IntoResponse {
+    // Get the image and mask data within a scope that drops the mutex guard
+    let (image_data, mask_data, image_id, mask_id) = {
+        let buffer = state.temp_buffer.lock().unwrap();
+        
+        let image_content = match buffer.get(&payload.image_id) {
+            Some(content) => content.clone(),
+            None => {
+                drop(buffer);
+                return (StatusCode::NOT_FOUND, "Uploaded image not found").into_response();
+            }
+        };
+        
+        let mask_content = match buffer.get(&payload.mask_id) {
+            Some(content) => content.clone(),
+            None => {
+                drop(buffer);
+                return (StatusCode::NOT_FOUND, "Uploaded mask not found").into_response();
+            }
+        };
+        
+        (image_content.data.clone(), mask_content.data.clone(), 
+         payload.image_id.clone(), payload.mask_id.clone())
+    }; // Mutex guard is dropped here
+    
+    // Create a unique ID for the inpainted image
+    let output_id = Uuid::new_v4().to_string();
+    let output_dir = format!("data/inpainted/{}", output_id);
+    let output_path = format!("{}/inpainted.png", output_dir);
+    
+    // Create output directory - this is the async operation
+    if let Err(e) = tokio::fs::create_dir_all(&output_dir).await {
+        error!("Failed to create output directory: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create output directory").into_response();
+    }
+    
+    // Build command to inpaint image
+    let mut command = Command::new("python3");
+    command.arg("inpaint_dream_image.py")
+        .arg("--input_image").arg(&image_data)
+        .arg("--mask_image").arg(&mask_data)
+        .arg("--prompt").arg(&payload.prompt)
+        .arg("--output_path").arg(&output_path);
+    
+    // Add optional parameters
+    if let Some(model) = &payload.model {
+        command.arg("--model").arg(model);
+    }
+    
+    if let Some(steps) = payload.steps {
+        command.arg("--steps").arg(&steps.to_string());
+    }
+    
+    if let Some(guidance_scale) = payload.guidance_scale {
+        command.arg("--guidance_scale").arg(&guidance_scale.to_string());
+    }
+    
+    if let Some(seed) = payload.seed {
+        command.arg("--seed").arg(&seed.to_string());
+    }
+    
+    if let Some(enhancement) = payload.enhancement {
+        command.arg("--enhancement").arg(&enhancement.to_string());
+    }
+    
+    // Execute the inpainting
+    let python_status = match command.status() {
+        Ok(status) => status,
+        Err(e) => {
+            error!("Failed to start inpainting script: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to start inpainting").into_response();
+        }
+    };
+    
+    if !python_status.success() {
+        error!("Inpainting script failed with status: {}", python_status);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Inpainting failed").into_response();
+    }
+    
+    // Create the buffer content
+    let buffered_result = BufferedContent {
+        id: output_id.clone(),
+        content_type: "inpainted_image".to_string(),
+        data: output_path.clone(),
+        metadata: serde_json::json!({
+            "original_image_id": image_id,
+            "mask_id": mask_id,
+            "prompt": payload.prompt,
+            "model": payload.model,
+            "inpainting_time": chrono::Utc::now().to_rfc3339()
+        }),
+        timestamp: chrono::Utc::now(),
+        expires_at: chrono::Utc::now() + chrono::Duration::hours(24),
+    };
+    
+    // Store the result in the buffer with a new lock
+    {
+        let mut buffer = state.temp_buffer.lock().unwrap();
+        buffer.insert(output_id.clone(), buffered_result);
+    }
+    
+    // Return success with the image paths
+    Json(serde_json::json!({
+        "success": true,
+        "original_image": image_data.replace("data/", "/data/"),
+        "mask_image": mask_data.replace("data/", "/data/"),
+        "inpainted_image": output_path.replace("data/", "/data/"),
+        "buffer_id": output_id
+    })).into_response()
 } 

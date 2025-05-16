@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Image Parts - Dream Visualizer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .image-inpainting {
+            margin-top: 20px;
+        }
+        
+        .drop-area {
+            border: 2px dashed var(--primary);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: var(--card-bg);
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .drop-area:hover {
+            background-color: var(--bg-secondary);
+        }
+        
+        .drop-area.highlight {
+            border-color: var(--accent);
+            background-color: var(--bg-secondary);
+        }
+        
+        .drop-area p {
+            margin: 10px 0;
+        }
+        
+        .canvas-container {
+            position: relative;
+            margin: 20px auto;
+            max-width: 800px;
+        }
+        
+        #imageCanvas {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+            background-color: #333;
+        }
+        
+        .tools {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .brush-size {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+        }
+        
+        .brush-size input {
+            margin: 0 10px;
+        }
+        
+        .color-picker {
+            display: flex;
+            align-items: center;
+        }
+        
+        .color-picker input {
+            margin-left: 10px;
+        }
+        
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .image-preview, .result-preview {
+            flex: 1;
+            min-width: 300px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            background-color: var(--card-bg);
+        }
+        
+        .image-preview img, .result-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .preview-header {
+            padding: 10px;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .preview-header h3 {
+            margin: 0;
+        }
+        
+        .preview-content {
+            padding: 10px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .model-selection {
+            margin-bottom: 15px;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        .instructions-steps {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+        }
+        
+        .instructions-steps ol {
+            margin-left: 25px;
+            padding-left: 0;
+        }
+        
+        .instructions-steps li {
+            margin-bottom: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Dream Image Editor</h1>
+        <p class="subtitle">Edit specific parts of your images with AI</p>
+    </header>
+
+    <div class="nav">
+        <a href="/">Home</a>
+        <a href="/images">Advanced Images</a>
+        <a href="/enhanced">Enhanced Images</a>
+        <a href="/modify">Modify Images</a>
+        <a href="/inpaint" class="active">Edit Image Parts</a>
+        <a href="/video">Advanced Video</a>
+        <a href="/history">History</a>
+        <div class="nav-right">
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" />
+                    <div class="slider round"></div>
+                </label>
+                <span style="margin-left: 10px">Dark Mode</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Edit Specific Parts of Your Images</h2>
+        <p>Select an area to edit and describe what you want it to become.</p>
+        
+        <div class="instructions-steps">
+            <h3>How to use:</h3>
+            <ol>
+                <li>Upload an image using the area below</li>
+                <li>Use the brush to paint over the areas you want to change (they will appear white)</li>
+                <li>Enter a description of what you want in those areas</li>
+                <li>Click "Edit Selected Areas" to transform just those parts of your image</li>
+            </ol>
+        </div>
+        
+        <div class="image-inpainting">
+            <div id="uploadStep">
+                <div id="dropArea" class="drop-area">
+                    <h3>Upload Image</h3>
+                    <p>Drag & drop an image here or click to browse</p>
+                    <p><small>Supported formats: JPG, PNG, BMP (max 10MB)</small></p>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+            
+            <div id="editStep" style="display: none;">
+                <div class="canvas-container">
+                    <canvas id="imageCanvas"></canvas>
+                    
+                    <div class="tools">
+                        <div class="brush-size">
+                            <label for="brushSize">Brush Size:</label>
+                            <input type="range" id="brushSize" min="1" max="50" value="20">
+                            <span id="brushSizeValue">20px</span>
+                        </div>
+                        
+                        <button id="clearMask" class="btn" style="background-color: #6c757d;">Clear Selection</button>
+                        <button id="undoBtn" class="btn" style="background-color: #6c757d;">Undo</button>
+                        <button id="resetBtn" class="btn" style="background-color: #6c757d;">Start Over</button>
+                    </div>
+                </div>
+                
+                <form id="inpaintForm">
+                    <label for="dreamPrompt">Describe what should replace the selected area:</label>
+                    <textarea id="dreamPrompt" name="prompt" placeholder="Replace the selected area with a beautiful sunset over mountains..." required></textarea>
+                    
+                    <div class="controls">
+                        <h3>AI Settings</h3>
+                        
+                        <div class="model-selection">
+                            <label for="modelSelect">Select AI Model:</label>
+                            <select id="modelSelect" name="model">
+                                <option value="sd21-inpaint">Stable Diffusion 2.1 Inpainting (Default)</option>
+                                <option value="sd15-inpaint">Stable Diffusion 1.5 Inpainting</option>
+                                <option value="dreamshaper-inpaint">Dreamshaper Inpainting</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="stepsRange">Quality (Steps):</label>
+                            <input type="range" id="stepsRange" name="steps" min="20" max="50" value="30">
+                            <span id="stepsValue">30</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="guidanceRange">Guidance Scale:</label>
+                            <input type="range" id="guidanceRange" name="guidance_scale" min="5" max="15" step="0.5" value="7.5">
+                            <span id="guidanceValue">7.5</span>
+                            <p class="hint"><small>How closely to follow the prompt. Higher values = more prompt adherence.</small></p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="seedInput">Random Seed (optional):</label>
+                            <input type="number" id="seedInput" name="seed" placeholder="Leave empty for random">
+                        </div>
+                    </div>
+                    
+                    <div class="buttons">
+                        <button type="submit" class="btn" id="inpaintBtn">Edit Selected Areas</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="loading" style="display: none; margin-top: 20px; text-align: center;">
+                <h3>Processing Your Image...</h3>
+                <p>This may take a minute or two depending on your settings.</p>
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+            
+            <div id="resultStep" style="display: none;">
+                <div class="preview-container">
+                    <div class="image-preview">
+                        <div class="preview-header">
+                            <h3>Original Image</h3>
+                        </div>
+                        <div class="preview-content">
+                            <img id="originalPreview" src="" alt="Original Image">
+                        </div>
+                    </div>
+                    
+                    <div class="result-preview">
+                        <div class="preview-header">
+                            <h3>Edited Image</h3>
+                        </div>
+                        <div class="preview-content">
+                            <img id="resultPreview" src="" alt="Edited Image">
+                            <div id="editDetails" style="margin-top: 10px;"></div>
+                            <button id="saveBtn" class="btn" style="margin-top: 15px;">Save to History</button>
+                            <button id="editAgainBtn" class="btn" style="margin-top: 15px; margin-left: 10px; background-color: #6c757d;">Edit Again</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Dream Visualizer &copy; 2025 - Built with Rust, Axum, and AI</p>
+    </footer>
+
+    <script src="/static/js/theme.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            const imageCanvas = document.getElementById('imageCanvas');
+            const ctx = imageCanvas.getContext('2d');
+            const brushSize = document.getElementById('brushSize');
+            const brushSizeValue = document.getElementById('brushSizeValue');
+            const clearMaskBtn = document.getElementById('clearMask');
+            const undoBtn = document.getElementById('undoBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const inpaintForm = document.getElementById('inpaintForm');
+            const stepsRange = document.getElementById('stepsRange');
+            const stepsValue = document.getElementById('stepsValue');
+            const guidanceRange = document.getElementById('guidanceRange');
+            const guidanceValue = document.getElementById('guidanceValue');
+            const uploadStep = document.getElementById('uploadStep');
+            const editStep = document.getElementById('editStep');
+            const loading = document.getElementById('loading');
+            const resultStep = document.getElementById('resultStep');
+            const originalPreview = document.getElementById('originalPreview');
+            const resultPreview = document.getElementById('resultPreview');
+            const editDetails = document.getElementById('editDetails');
+            const saveBtn = document.getElementById('saveBtn');
+            const editAgainBtn = document.getElementById('editAgainBtn');
+            
+            // Variables
+            let isDrawing = false;
+            let originalImage = null;
+            let mask = null;
+            let uploadedImageId = null;
+            let uploadedImagePath = null;
+            let inpaintedImageId = null;
+            let maskImageId = null;
+            let strokeHistory = [];
+            
+            // Initialize canvas settings
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = parseInt(brushSize.value);
+            
+            // Update brush size value display
+            brushSize.addEventListener('input', function() {
+                const size = this.value;
+                brushSizeValue.textContent = size + 'px';
+                ctx.lineWidth = parseInt(size);
+            });
+            
+            // Event listeners for drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dropArea.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('highlight');
+            }
+            
+            // Handle file drop
+            dropArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+            
+            // Handle file input change
+            fileInput.addEventListener('change', function() {
+                handleFiles(this.files);
+            });
+            
+            // Click on drop area to trigger file input
+            dropArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // Handle uploaded files
+            function handleFiles(files) {
+                if (files.length > 0) {
+                    const file = files[0];
+                    
+                    // Check file type
+                    if (!file.type.match('image.*')) {
+                        alert('Please upload an image file');
+                        return;
+                    }
+                    
+                    // Check file size (max 10MB)
+                    if (file.size > 10 * 1024 * 1024) {
+                        alert('File size exceeds 10MB limit');
+                        return;
+                    }
+                    
+                    // Show loading indicator
+                    dropArea.innerHTML = '<h3>Uploading...</h3>';
+                    
+                    // Create form data for file upload
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    
+                    // Upload the file
+                    fetch('/upload_image_for_modification', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Upload failed');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Store the image ID and path
+                            uploadedImageId = data.image_id;
+                            uploadedImagePath = data.file_path;
+                            
+                            // Load the image into the canvas
+                            originalImage = new Image();
+                            originalImage.onload = function() {
+                                // Size the canvas to fit the image
+                                const maxWidth = 800;
+                                let width = originalImage.width;
+                                let height = originalImage.height;
+                                
+                                if (width > maxWidth) {
+                                    const ratio = maxWidth / width;
+                                    width = maxWidth;
+                                    height = height * ratio;
+                                }
+                                
+                                imageCanvas.width = width;
+                                imageCanvas.height = height;
+                                
+                                // Draw the image on the canvas
+                                ctx.drawImage(originalImage, 0, 0, width, height);
+                                
+                                // Create a blank mask layer
+                                mask = ctx.getImageData(0, 0, width, height);
+                                
+                                // Clear the stroke history
+                                strokeHistory = [];
+                                
+                                // Hide upload step and show edit step
+                                uploadStep.style.display = 'none';
+                                editStep.style.display = 'block';
+                                
+                                // Also set the original preview image
+                                originalPreview.src = uploadedImagePath;
+                            };
+                            originalImage.src = uploadedImagePath;
+                            
+                        } else {
+                            alert('Failed to upload image: ' + (data.message || 'Unknown error'));
+                            resetUploadArea();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to upload image. Please try again.');
+                        resetUploadArea();
+                    });
+                }
+            }
+            
+            // Reset upload area
+            function resetUploadArea() {
+                dropArea.innerHTML = `
+                    <h3>Upload Image</h3>
+                    <p>Drag & drop an image here or click to browse</p>
+                    <p><small>Supported formats: JPG, PNG, BMP (max 10MB)</small></p>
+                `;
+            }
+            
+            // Canvas drawing functions
+            imageCanvas.addEventListener('mousedown', startDrawing);
+            imageCanvas.addEventListener('mousemove', draw);
+            imageCanvas.addEventListener('mouseup', stopDrawing);
+            imageCanvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch support
+            imageCanvas.addEventListener('touchstart', handleTouch);
+            imageCanvas.addEventListener('touchmove', handleTouchMove);
+            imageCanvas.addEventListener('touchend', stopDrawing);
+            
+            function handleTouch(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                imageCanvas.dispatchEvent(mouseEvent);
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                imageCanvas.dispatchEvent(mouseEvent);
+            }
+            
+            function startDrawing(e) {
+                isDrawing = true;
+                
+                // Save current canvas state for undo
+                strokeHistory.push(ctx.getImageData(0, 0, imageCanvas.width, imageCanvas.height));
+                
+                // Start a new path
+                ctx.beginPath();
+                const rect = imageCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                ctx.moveTo(x, y);
+                
+                // Draw a dot if just clicked
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+            
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                const rect = imageCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+            
+            function stopDrawing() {
+                if (isDrawing) {
+                    ctx.closePath();
+                    isDrawing = false;
+                }
+            }
+            
+            // Clear mask button
+            clearMaskBtn.addEventListener('click', function() {
+                // Save current state before clearing
+                strokeHistory.push(ctx.getImageData(0, 0, imageCanvas.width, imageCanvas.height));
+                
+                // Redraw original image
+                ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                ctx.drawImage(originalImage, 0, 0, imageCanvas.width, imageCanvas.height);
+            });
+            
+            // Undo button
+            undoBtn.addEventListener('click', function() {
+                if (strokeHistory.length > 0) {
+                    ctx.putImageData(strokeHistory.pop(), 0, 0);
+                }
+            });
+            
+            // Reset button
+            resetBtn.addEventListener('click', function() {
+                // Clear canvas and hide edit step
+                ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                editStep.style.display = 'none';
+                resultStep.style.display = 'none';
+                uploadStep.style.display = 'block';
+                resetUploadArea();
+                
+                // Reset variables
+                uploadedImageId = null;
+                uploadedImagePath = null;
+                inpaintedImageId = null;
+                maskImageId = null;
+                originalImage = null;
+                mask = null;
+                strokeHistory = [];
+            });
+            
+            // Update range value displays
+            stepsRange.addEventListener('input', function() {
+                stepsValue.textContent = this.value;
+            });
+            
+            guidanceRange.addEventListener('input', function() {
+                guidanceValue.textContent = this.value;
+            });
+            
+            // Handle form submission for inpainting
+            inpaintForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (!uploadedImageId) {
+                    alert('Please upload an image first');
+                    return;
+                }
+                
+                // Get the mask from the canvas
+                // Convert canvas to black and white mask
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = imageCanvas.width;
+                tempCanvas.height = imageCanvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Draw original image first
+                tempCtx.drawImage(originalImage, 0, 0, imageCanvas.width, imageCanvas.height);
+                
+                // Get current canvas with mask
+                const currentCanvas = imageCanvas.toDataURL('image/png');
+                const currentImage = new Image();
+                currentImage.onload = function() {
+                    // Draw the current canvas (with white brush strokes)
+                    tempCtx.globalCompositeOperation = 'difference';
+                    tempCtx.drawImage(currentImage, 0, 0, imageCanvas.width, imageCanvas.height);
+                    
+                    // Now tempCanvas contains only the mask (white parts where user drew)
+                    // Convert it to black and white
+                    const maskDataUrl = tempCanvas.toDataURL('image/png');
+                    
+                    // Upload the mask
+                    fetch(maskDataUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const formData = new FormData();
+                            formData.append('mask', blob, 'mask.png');
+                            
+                            return fetch('/upload_mask', {
+                                method: 'POST',
+                                body: formData
+                            });
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Mask upload failed');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // Store mask ID
+                                maskImageId = data.mask_id;
+                                
+                                // Show loading indicator
+                                editStep.style.display = 'none';
+                                loading.style.display = 'block';
+                                
+                                // Prepare inpainting request
+                                const inpaintData = {
+                                    prompt: document.getElementById('dreamPrompt').value,
+                                    image_id: uploadedImageId,
+                                    mask_id: maskImageId,
+                                    model: document.getElementById('modelSelect').value,
+                                    steps: parseInt(stepsRange.value),
+                                    guidance_scale: parseFloat(guidanceRange.value)
+                                };
+                                
+                                // Add seed if provided
+                                const seedValue = document.getElementById('seedInput').value;
+                                if (seedValue.trim() !== '') {
+                                    inpaintData.seed = parseInt(seedValue);
+                                }
+                                
+                                // Send inpainting request
+                                return fetch('/inpaint_image', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify(inpaintData)
+                                });
+                            } else {
+                                throw new Error('Mask upload failed');
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Inpainting failed');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // Hide loading indicator
+                                loading.style.display = 'none';
+                                
+                                // Store inpainted image ID
+                                inpaintedImageId = data.buffer_id;
+                                
+                                // Set the result image
+                                resultPreview.src = data.inpainted_image + '?t=' + new Date().getTime(); // Add timestamp to prevent caching
+                                
+                                // Show edit details
+                                editDetails.innerHTML = `
+                                    <p><strong>Prompt:</strong> ${document.getElementById('dreamPrompt').value}</p>
+                                    <p><strong>Model:</strong> ${document.getElementById('modelSelect').value}</p>
+                                `;
+                                
+                                // Show the result step
+                                resultStep.style.display = 'block';
+                                
+                            } else {
+                                alert('Failed to inpaint image: ' + (data.message || 'Unknown error'));
+                                loading.style.display = 'none';
+                                editStep.style.display = 'block';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Failed to process image. Please try again.');
+                            loading.style.display = 'none';
+                            editStep.style.display = 'block';
+                        });
+                };
+                currentImage.src = currentCanvas;
+            });
+            
+            // Handle save button click
+            saveBtn.addEventListener('click', function() {
+                if (inpaintedImageId) {
+                    alert('Image saved to history successfully!');
+                    // TODO: Implement actual saving to history
+                }
+            });
+            
+            // Handle edit again button
+            editAgainBtn.addEventListener('click', function() {
+                resultStep.style.display = 'none';
+                editStep.style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html> 
